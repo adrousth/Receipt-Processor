@@ -1,13 +1,13 @@
-// Simle API 
-// https://github.com/fetch-rewards/receipt-processor-challenge
+// Simple API for the challenge located at https://github.com/fetch-rewards/receipt-processor-challenge
+// First time using Go!
 
 
 package main
 import (
 	"fmt"
 
-    "net/http"
-    "github.com/gin-gonic/gin"
+	"net/http"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
 	"math"
@@ -17,51 +17,56 @@ import (
 	"strconv"
 ) 
 
-
-
 type receipt struct {
 	ID string `json:"id"`
-    Retailer string `json:"retailer"`
+	Retailer string `json:"retailer"`
 	PurchaseDate string `json:"purchaseDate"`
-    PurchaseTime string `json:"purchaseTime"`
-    Total string `json:"total"` 
+	PurchaseTime string `json:"purchaseTime"`
+	Total string `json:"total"` 
 	Items []item `json:"items`
 }
-
 
 type item struct {
 	ShortDescription string `json:"shortDescription"`
 	Price string `json:"price"`
 }
 
+
+
 func main() {
-    router := gin.Default()
+	router := gin.Default()
 	router.POST("/receipts/process", postReceipt)
 	router.GET("/receipts", getReceipts)
 	router.GET("/receipts/:id/points", getPoints)
 
-    router.Run("localhost:8080")
+	router.Run("localhost:8080")
 }
 
 var receipts = []receipt {}
 
-func postReceipt(c *gin.Context) {
-    var newReceipt receipt
 
-    if err := c.BindJSON(&newReceipt); err != nil {
+// generates ID for receipt and adds it to memory
+func postReceipt(c *gin.Context) {
+	var newReceipt receipt
+
+	if err := c.BindJSON(&newReceipt); err != nil {
 		fmt.Println(err)
-        return
-    }
+	return
+	}
 	newReceipt.ID = uuid.New().String()
 	
-    receipts = append(receipts, newReceipt)
-    c.IndentedJSON(http.StatusCreated, gin.H{"id": newReceipt.ID})
+	receipts = append(receipts, newReceipt)
+	c.IndentedJSON(http.StatusCreated, gin.H{"id": newReceipt.ID})
 }
 
+
+// get all receipts
 func getReceipts(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, receipts)
 }
 
+
+// gets the number of points the receipt with the given ID, if it exists
 func getPoints(c *gin.Context) {
 	id := c.Param("id")
 
@@ -76,12 +81,11 @@ func getPoints(c *gin.Context) {
 }
 
 
-
+// calcuates the number of points for the given receipt.
 func calculatePoints(receipt receipt) string {
 	points := 0
 
-	// One point for every alphanumeric character in the retailer name.
-	// probably not the best way to do this.
+	// One point for every alphanumeric character in the retailer name. (probably a better way to do this?)
 	for _, char := range receipt.Retailer {
 		if regexp.MustCompile(`^[a-zA-Z0-9]*$`).MatchString(string(char)) {
 			points += 1
@@ -104,7 +108,8 @@ func calculatePoints(receipt receipt) string {
 	points += (len(receipt.Items) / 2) * 5
 
 
-	// If the trimmed length of the item description is a multiple of 3, multiply the price by 0.2 and round up to the nearest integer. The result is the number of points earned.
+	// If the trimmed length of the item description is a multiple of 3, multiply the price by 0.2 and round up to the nearest integer.
+	// The result is the number of points earned.
 	for _, item := range receipt.Items {
 		trimmed := strings.TrimSpace(item.ShortDescription)
 		if math.Mod(float64(len(trimmed)), 3) == 0 {
